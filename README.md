@@ -89,7 +89,7 @@ Will take a logger:timestamp() and print it in the format of yyyy-mm-ddTHH:MM:SS
 ## Running the tests
 
 ```
-$ rebar3 eunit
+$ rebar3 ct
 ```
 
 ### Versioning
