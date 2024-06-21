@@ -1,6 +1,6 @@
 # jsonformat
 
-A custom formatter for Erlang OTP logger that outputs JSON using `jsx`
+A custom formatter for Erlang OTP logger that outputs JSON using `thoas`
 
 ## Getting Started
 

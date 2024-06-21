@@ -9,7 +9,15 @@
     ?assertEqual(thoas:decode(Expected), thoas:decode(Actual))
 ).
 
-all() -> [format_test, format_funs_test, key_mapping_test, list_format_test, meta_without_test, meta_with_test, newline_test].
+all() -> [
+            format_test,
+            format_funs_test,
+            key_mapping_test,
+            list_format_test,
+            meta_without_test,
+            meta_with_test,
+            newline_test
+        ].
 
 format_test(_) ->
   ?assertJSONEqual(

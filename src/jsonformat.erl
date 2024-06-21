@@ -79,12 +79,12 @@ pre_encode(Data, Config) ->
     maps:fold(
         fun
             (K, V, Acc) when is_map(V) ->
-                maps:put(jsonify(K), pre_encode(V, Config), Acc);
+                maps:put(jsonify(K, Config), pre_encode(V, Config), Acc);
             % assume list of maps
             (K, Vs, Acc) when is_list(Vs), is_map(hd(Vs)) ->
-                maps:put(jsonify(K), [pre_encode(V, Config) || V <- Vs, is_map(V)], Acc);
+                maps:put(jsonify(K, Config), [pre_encode(V, Config) || V <- Vs, is_map(V)], Acc);
             (K, V, Acc) ->
-                maps:put(jsonify(K), jsonify(V), Acc)
+                maps:put(jsonify(K, Config), jsonify(V, Config), Acc)
         end,
         maps:new(),
         Data
@@ -102,25 +102,35 @@ encode(Data, Config) ->
         false -> Json
     end.
 
-jsonify(A) when is_atom(A) -> A;
-jsonify(B) when is_binary(B) -> B;
-jsonify(I) when is_integer(I) -> I;
-jsonify(F) when is_float(F) -> F;
-jsonify(B) when is_boolean(B) -> B;
-jsonify(P) when is_pid(P) -> jsonify(pid_to_list(P));
-jsonify(P) when is_port(P) -> jsonify(port_to_list(P));
-jsonify(F) when is_function(F) -> jsonify(erlang:fun_to_list(F));
-jsonify(L) when is_list(L) ->
+jsonify(A, _Config) when is_atom(A) -> A;
+jsonify(B, Config) when is_binary(B) -> maybe_cut(B, Config);
+jsonify(I, _Config) when is_integer(I) -> I;
+jsonify(F, _Config) when is_float(F) -> F;
+jsonify(B, _Config) when is_boolean(B) -> B;
+jsonify(P, Config) when is_pid(P) -> jsonify(pid_to_list(P), Config);
+jsonify(P, Config) when is_port(P) -> jsonify(port_to_list(P), Config);
+jsonify(F, Config) when is_function(F) -> jsonify(erlang:fun_to_list(F), Config);
+jsonify(L, Config) when is_list(L) ->
     try list_to_binary(L) of
-        S -> S
+        S -> maybe_cut(S, Config)
     catch
         error:badarg ->
-            unicode:characters_to_binary(io_lib:format("~0p", [L]))
+            Rst = unicode:characters_to_binary(io_lib:format("~0p", [L])),
+            maybe_cut(Rst, Config)
     end;
-jsonify({M, F, A}) when is_atom(M), is_atom(F), is_integer(A) ->
+jsonify({M, F, A}, _Config) when is_atom(M), is_atom(F), is_integer(A) ->
     <<(a2b(M))/binary, $:, (a2b(F))/binary, $/, (integer_to_binary(A))/binary>>;
-jsonify(Any) ->
-    unicode:characters_to_binary(io_lib:format("~0p", [Any])).
+jsonify(Any, Config) ->
+    Rst = unicode:characters_to_binary(io_lib:format("~0p", [Any])),
+    maybe_cut(Rst, Config).
+
+maybe_cut(Bin, #{field_size := FSize}) ->
+    case byte_size(Bin) of
+        Z when Z>FSize+1 -> binary:part(Bin, 0, FSize);
+        _ -> Bin
+    end;
+maybe_cut(Bin, _Config) ->
+    Bin.
 
 a2b(A) -> atom_to_binary(A, utf8).
 
